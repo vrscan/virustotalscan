@@ -1,4 +1,4 @@
-module vtscan
+module github.com/vrscan/virustotalscan
 
 go 1.18
 
