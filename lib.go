@@ -4,12 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"sync"
 
 	"github.com/valyala/fasthttp"
 )
 
 type Vtscan struct {
-	token string
+	token  string
+	server string
+
+	m    sync.Mutex
+	err  error //last error
+	conn net.Conn
 }
 
 type ServerAnswer struct {
@@ -22,8 +29,13 @@ type ServerAnswer struct {
 
 /*
 	Register client instance by email
+	server_ip - only for raw socket data, if paid
 */
-func Register(email string) (*Vtscan, error) {
+func Register(email string, server_ip string) (*Vtscan, error) {
+	if email == "" {
+		return nil, fmt.Errorf("incorrect email")
+	}
+
 	args := fasthttp.AcquireArgs()
 	defer fasthttp.ReleaseArgs(args)
 	args.Add("email", email)
@@ -52,7 +64,32 @@ func Register(email string) (*Vtscan, error) {
 		return nil, errors.New("Invalid token. Contact support.")
 	}
 
-	return &Vtscan{token: ret.Record.Token}, nil
+	vts := &Vtscan{
+		token:  ret.Record.Token,
+		server: server_ip,
+	}
+
+	if server_ip != "" {
+		vts.startSocketSender()
+	}
+
+	return vts, nil
+}
+
+func (v *Vtscan) setLastError(err error) {
+	v.m.Lock()
+	defer v.m.Unlock()
+	v.err = err
+}
+
+func (v *Vtscan) LastError() error {
+	v.m.Lock()
+	defer v.m.Unlock()
+	return v.err
+}
+
+func (v *Vtscan) Token() string {
+	return v.token
 }
 
 /*

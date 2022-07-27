@@ -3,16 +3,18 @@ package vtscan
 import (
 	"io/ioutil"
 	"testing"
+
+	"github.com/vrscan/virustotalscan"
 )
 
-func Test_All(t *testing.T) {
+func Test_socketFastCheck(t *testing.T) {
 	err := initTestConfig()
 	if err != nil {
 		t.Fatal(err.Error())
 		return
 	}
 
-	client, err := Register(config.Email, config.Server)
+	client, err := vtscan.Register(config.Email, config.Server)
 	if err != nil {
 		t.Fatal(err.Error())
 		return
@@ -24,25 +26,20 @@ func Test_All(t *testing.T) {
 	}
 
 	for i := 0; i < 100; i++ {
-		for file, ret := range tests {
+		for file, _ := range tests {
 			filebuf, err := ioutil.ReadFile(file)
 			if err != nil {
 				t.Fatal(err.Error())
 				return
 			}
 
-			found, err := client.Check(filebuf)
+			found, err := client.FastCheck(filebuf)
 			if err != nil {
 				t.Fatal(err.Error())
+				return
 			}
 
-			if ret && !found {
-				t.Fatal("Test file is not detected as suspicious")
-			}
-
-			if !ret && found {
-				t.Fatal("Test file is detected as suspicious ")
-			}
+			t.Logf("found result: %t", found)
 		}
 	}
 }
