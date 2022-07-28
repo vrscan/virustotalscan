@@ -25,7 +25,7 @@ func Test_socketFastCheck(t *testing.T) {
 		"./testfiles/nothing.bin": false,
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 300; i++ {
 		for file, _ := range tests {
 			filebuf, err := ioutil.ReadFile(file)
 			if err != nil {

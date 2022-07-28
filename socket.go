@@ -14,23 +14,47 @@ func (v *Vtscan) startSocketSender() {
 		KeepAlive: time.Second * 15,
 	}
 
-	var err error
-	v.conn, err = dialer.Dial("tcp", v.server+":82")
-	if err != nil {
-		v.setLastError(err)
-		return
-	}
+	go func() {
+		for {
+			v.m.Lock()
+			if v.conn != nil { //is conn still alive?
+				v.m.Unlock()
+				time.Sleep(time.Minute)
+				continue
+			}
+			v.m.Unlock()
 
-	v.conn.SetDeadline(time.Now().Add(time.Minute))
+			//conn is dead, reconnect
 
-	//токен
-	var tbuf = []byte(v.token)
-	tbb := bytes.NewBuffer(tbuf)
-	_, err = io.CopyN(v.conn, tbb, 32)
-	if err != nil {
-		v.setLastError(err)
-		return
-	}
+			conn, err := dialer.Dial("tcp", v.server+":82")
+
+			if err != nil {
+				v.errlog.Println(err.Error())
+				v.setLastError(err)
+				time.Sleep(time.Minute)
+				continue
+			}
+
+			v.m.Lock()
+			v.conn = conn
+			v.m.Unlock()
+
+			v.conn.SetDeadline(time.Now().Add(time.Minute))
+
+			//токен
+			var tbuf = []byte(v.token)
+			tbb := bytes.NewBuffer(tbuf)
+			_, err = io.CopyN(v.conn, tbb, 32)
+			if err != nil {
+				v.errlog.Println(err.Error())
+				v.setLastError(err)
+				time.Sleep(time.Minute)
+				continue
+			}
+
+			time.Sleep(time.Minute)
+		}
+	}()
 }
 
 /*
@@ -40,9 +64,12 @@ func (v *Vtscan) startSocketSender() {
 		true if something found with description
 */
 func (v *Vtscan) FastCheck(data []byte) (bool, error) {
+	v.m.Lock()
 	if v.conn == nil {
+		v.m.Unlock()
 		return false, fmt.Errorf("connection is closed")
 	}
+	v.m.Unlock()
 
 	var dataLen [4]byte
 	var dsizeBuf = make([]byte, 0, 4)
@@ -98,6 +125,5 @@ func (v *Vtscan) FastCheck(data []byte) (bool, error) {
 
 	//9 = nothing found
 	//8 = dangerous packet
-
 	return bw.Bytes()[0] == 8, nil
 }
