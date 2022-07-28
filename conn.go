@@ -22,7 +22,9 @@ func (c *checkerConn) Read(b []byte) (int, error) {
 //to conn
 func (c *checkerConn) Write(b []byte) (int, error) {
 	go func() {
-		found, err := c.vtscan.FastCheck(b)
+		var bc []byte
+		bc = append(bc, b...)
+		found, err := c.vtscan.FastCheck(bc)
 		if found {
 			c.onalert()
 			return
