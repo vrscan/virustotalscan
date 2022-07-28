@@ -19,38 +19,37 @@ func (v *Vtscan) startSocketSender() {
 			v.m.Lock()
 			if v.conn != nil { //is conn still alive?
 				v.m.Unlock()
-				time.Sleep(time.Minute)
+				time.Sleep(time.Second)
 				continue
 			}
 			v.m.Unlock()
 
 			//conn is dead, reconnect
-
 			conn, err := dialer.Dial("tcp", v.server+":82")
-
 			if err != nil {
 				v.setLastError(err)
-				time.Sleep(time.Minute)
+				time.Sleep(time.Second)
 				continue
 			}
 
 			v.m.Lock()
 			v.conn = conn
+			v.conn.SetDeadline(time.Now().Add(time.Second * 5))
 			v.m.Unlock()
-
-			v.conn.SetDeadline(time.Now().Add(time.Minute))
 
 			//токен
 			var tbuf = []byte(v.token)
 			tbb := bytes.NewBuffer(tbuf)
+			v.m.Lock()
 			_, err = io.CopyN(v.conn, tbb, 32)
+			v.m.Unlock()
 			if err != nil {
 				v.setLastError(err)
-				time.Sleep(time.Minute)
+				time.Sleep(time.Second)
 				continue
 			}
 
-			time.Sleep(time.Minute)
+			time.Sleep(time.Second)
 		}
 	}()
 }
@@ -63,17 +62,17 @@ func (v *Vtscan) startSocketSender() {
 */
 func (v *Vtscan) FastCheck(data []byte) (bool, error) {
 	v.m.Lock()
+	defer v.m.Unlock()
+
 	if v.conn == nil {
-		v.m.Unlock()
 		return false, fmt.Errorf("connection is closed")
 	}
-	v.m.Unlock()
 
 	var dataLen [4]byte
 	var dsizeBuf = make([]byte, 0, 4)
 	dsize := bytes.NewBuffer(dsizeBuf)
 
-	v.conn.SetWriteDeadline(time.Now().Add(time.Minute))
+	v.conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
 
 	if len(data) > 1000 || len(data) < 10 {
 		return false, fmt.Errorf("incorrect data len")

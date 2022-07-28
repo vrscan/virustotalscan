@@ -14,8 +14,10 @@ type Vtscan struct {
 	token  string
 	server string
 
-	m    sync.Mutex
+	merr sync.Mutex
 	err  error //last error
+
+	m    sync.Mutex
 	conn net.Conn
 }
 
@@ -76,15 +78,22 @@ func Register(email string, server_ip string) (*Vtscan, error) {
 	return vts, nil
 }
 
-func (v *Vtscan) setLastError(err error) {
+func (v *Vtscan) SocketIsConnected() bool {
 	v.m.Lock()
-	defer v.m.Unlock()
+	b := v.conn != nil
+	v.m.Unlock()
+	return b
+}
+
+func (v *Vtscan) setLastError(err error) {
+	v.merr.Lock()
+	defer v.merr.Unlock()
 	v.err = err
 }
 
 func (v *Vtscan) LastError() error {
-	v.m.Lock()
-	defer v.m.Unlock()
+	v.merr.Lock()
+	defer v.merr.Unlock()
 	return v.err
 }
 

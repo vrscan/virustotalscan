@@ -3,6 +3,7 @@ package vtscan
 import (
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/vrscan/virustotalscan"
 )
@@ -20,12 +21,20 @@ func Test_socketFastCheck(t *testing.T) {
 		return
 	}
 
+	for {
+		if !client.SocketIsConnected() {
+			time.Sleep(time.Second)
+			continue
+		}
+		break
+	}
+
 	tests := map[string]bool{
 		"./testfiles/found.bin":   true,
 		"./testfiles/nothing.bin": false,
 	}
 
-	for i := 0; i < 300; i++ {
+	for i := 0; i < 50; i++ {
 		for file, _ := range tests {
 			filebuf, err := ioutil.ReadFile(file)
 			if err != nil {

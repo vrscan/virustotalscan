@@ -7,7 +7,7 @@ import (
 )
 
 type checkerConn struct {
-	conn    net.Conn
+	conn    net.Conn // original connection
 	vtscan  *Vtscan
 	buf     *bytes.Buffer
 	onalert func()
