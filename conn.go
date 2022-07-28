@@ -1,16 +1,14 @@
-package main
+package vtscan
 
 import (
 	"bytes"
 	"net"
 	"time"
-
-	vt "github.com/vrscan/virustotalscan"
 )
 
 type checkerConn struct {
 	conn    net.Conn
-	vtscan  *vt.Vtscan
+	vtscan  *Vtscan
 	buf     *bytes.Buffer
 	onalert func()
 	onerror func(err error)
@@ -63,7 +61,7 @@ func (c *checkerConn) SetWriteDeadline(t time.Time) error {
 /*
 	Creates MITM conn, called deffered alert if something found
 */
-func NewDefferedConnChecker(conn net.Conn, vtscan *vt.Vtscan, onalert func(), onerror func(err error)) net.Conn {
+func NewDefferedConnChecker(conn net.Conn, vtscan *Vtscan, onalert func(), onerror func(err error)) net.Conn {
 	var b []byte
 	buf := bytes.NewBuffer(b)
 	return &checkerConn{
