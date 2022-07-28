@@ -106,7 +106,7 @@ func (v *Vtscan) FastCheck(data []byte) (bool, error) {
 	var buf []byte
 	bw := bytes.NewBuffer(buf)
 
-	v.conn.SetReadDeadline(time.Now().Add(time.Minute))
+	v.conn.SetReadDeadline(time.Now().Add(time.Second * 10))
 	n, err := io.CopyN(bw, v.conn, 1)
 	if n > 1 {
 		v.conn.Close()
