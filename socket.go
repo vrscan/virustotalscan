@@ -29,7 +29,6 @@ func (v *Vtscan) startSocketSender() {
 			conn, err := dialer.Dial("tcp", v.server+":82")
 
 			if err != nil {
-				v.errlog.Println(err.Error())
 				v.setLastError(err)
 				time.Sleep(time.Minute)
 				continue
@@ -46,7 +45,6 @@ func (v *Vtscan) startSocketSender() {
 			tbb := bytes.NewBuffer(tbuf)
 			_, err = io.CopyN(v.conn, tbb, 32)
 			if err != nil {
-				v.errlog.Println(err.Error())
 				v.setLastError(err)
 				time.Sleep(time.Minute)
 				continue

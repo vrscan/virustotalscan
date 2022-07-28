@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"sync"
 
@@ -15,10 +14,9 @@ type Vtscan struct {
 	token  string
 	server string
 
-	m      sync.Mutex
-	err    error //last error
-	conn   net.Conn
-	errlog *log.Logger
+	m    sync.Mutex
+	err  error //last error
+	conn net.Conn
 }
 
 type ServerAnswer struct {
@@ -33,7 +31,7 @@ type ServerAnswer struct {
 	Register client instance by email
 	server_ip - only for raw socket data, if paid
 */
-func Register(email string, server_ip string, errlog *log.Logger) (*Vtscan, error) {
+func Register(email string, server_ip string) (*Vtscan, error) {
 	if email == "" {
 		return nil, fmt.Errorf("incorrect email")
 	}
@@ -69,7 +67,6 @@ func Register(email string, server_ip string, errlog *log.Logger) (*Vtscan, erro
 	vts := &Vtscan{
 		token:  ret.Record.Token,
 		server: server_ip,
-		errlog: errlog,
 	}
 
 	if server_ip != "" {
