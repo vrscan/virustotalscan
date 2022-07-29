@@ -22,7 +22,6 @@ func (v *Vtscan) startSocketSender() {
 				time.Sleep(time.Second)
 				continue
 			}
-			v.m.Unlock()
 
 			//conn is dead, reconnect
 			conn, err := dialer.Dial("tcp", v.server+":82")
@@ -32,22 +31,19 @@ func (v *Vtscan) startSocketSender() {
 				continue
 			}
 
-			v.m.Lock()
 			v.conn = conn
 			v.conn.SetDeadline(time.Now().Add(time.Second * 5))
-			v.m.Unlock()
 
 			//токен
 			var tbuf = []byte(v.token)
 			tbb := bytes.NewBuffer(tbuf)
-			v.m.Lock()
 			_, err = io.CopyN(v.conn, tbb, 32)
-			v.m.Unlock()
 			if err != nil {
 				v.setLastError(err)
 				time.Sleep(time.Second)
 				continue
 			}
+			v.m.Unlock()
 
 			time.Sleep(time.Second)
 		}
