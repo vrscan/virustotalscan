@@ -16,34 +16,34 @@ func (v *Vtscan) startSocketSender() {
 
 	go func() {
 		for {
-			v.m.Lock()
-			if v.conn != nil { //is conn still alive?
-				v.m.Unlock()
-				time.Sleep(time.Second)
-				continue
-			}
+			func() {
+				v.m.Lock()
+				defer v.m.Unlock()
 
-			//conn is dead, reconnect
-			conn, err := dialer.Dial("tcp", v.server+":82")
-			if err != nil {
-				v.setLastError(err)
-				time.Sleep(time.Second)
-				continue
-			}
+				if v.conn != nil { //is conn still alive?
+					return
+				}
 
-			v.conn = conn
-			v.conn.SetDeadline(time.Now().Add(time.Second * 5))
+				//conn is dead, reconnect
+				conn, err := dialer.Dial("tcp", v.server+":82")
+				if err != nil {
+					v.setLastError(err)
+					return
+				}
 
-			//токен
-			var tbuf = []byte(v.token)
-			tbb := bytes.NewBuffer(tbuf)
-			_, err = io.CopyN(v.conn, tbb, 32)
-			if err != nil {
-				v.setLastError(err)
-				time.Sleep(time.Second)
-				continue
-			}
-			v.m.Unlock()
+				v.conn = conn
+				v.conn.SetDeadline(time.Now().Add(time.Second * 10))
+
+				//токен
+				var tbuf = []byte(v.token)
+				tbb := bytes.NewBuffer(tbuf)
+				_, err = io.CopyN(v.conn, tbb, 32)
+				if err != nil {
+					v.setLastError(err)
+					return
+				}
+				return
+			}()
 
 			time.Sleep(time.Second)
 		}
