@@ -11,6 +11,5 @@ import (
 */
 
 func fastYaraSearch(data []byte) bool {
-	st := string(data)
-	return strings.Contains(st, "it\"")
+	return false
 }
