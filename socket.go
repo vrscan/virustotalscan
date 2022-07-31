@@ -57,6 +57,14 @@ func (v *Vtscan) startSocketSender() {
 		true if something found with description
 */
 func (v *Vtscan) FastCheck(data []byte) (bool, error) {
+	if len(data) < 40 {
+		return false, nil
+	}
+
+	if !fastYaraSearch(data) {
+		return false, nil
+	}
+
 	v.m.Lock()
 	defer v.m.Unlock()
 
