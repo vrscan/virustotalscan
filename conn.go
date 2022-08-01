@@ -2,12 +2,13 @@ package vtscan
 
 import (
 	"bytes"
-	"log"
 	"net"
 	"time"
+
+	"github.com/MasterDimmy/zipologger"
 )
 
-type checkerConn struct {
+type ConnChecker struct {
 	conn    net.Conn // original connection
 	vtscan  *Vtscan
 	buf     *bytes.Buffer
@@ -15,15 +16,19 @@ type checkerConn struct {
 	onerror func(err error)
 
 	logAll bool
-	log    *log.Logger
+	log    *zipologger.Logger
 }
 
-func (c *checkerConn) SetLogAll(b bool) {
+func (c *ConnChecker) SetLogAll(b bool) {
 	c.logAll = b
 }
 
+func (c *ConnChecker) SetLogger(log *zipologger.Logger) {
+	c.log = log
+}
+
 //from conn to buffer
-func (c *checkerConn) Read(b []byte) (int, error) {
+func (c *ConnChecker) Read(b []byte) (int, error) {
 	if c.logAll {
 		c.log.Printf("[%s] => %s", c.conn.RemoteAddr().String(), string(b))
 	}
@@ -31,7 +36,7 @@ func (c *checkerConn) Read(b []byte) (int, error) {
 }
 
 //to conn
-func (c *checkerConn) Write(b []byte) (int, error) {
+func (c *ConnChecker) Write(b []byte) (int, error) {
 	if c.logAll {
 		c.log.Printf("[%s] <= %s", c.conn.RemoteAddr().String(), string(b))
 	}
@@ -51,42 +56,41 @@ func (c *checkerConn) Write(b []byte) (int, error) {
 	return c.conn.Write(b)
 }
 
-func (c *checkerConn) Close() error {
+func (c *ConnChecker) Close() error {
 	return c.conn.Close()
 }
 
-func (c *checkerConn) LocalAddr() net.Addr {
+func (c *ConnChecker) LocalAddr() net.Addr {
 	return c.conn.LocalAddr()
 }
 
-func (c *checkerConn) RemoteAddr() net.Addr {
+func (c *ConnChecker) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
 }
 
-func (c *checkerConn) SetDeadline(t time.Time) error {
+func (c *ConnChecker) SetDeadline(t time.Time) error {
 	return c.conn.SetDeadline(t)
 }
 
-func (c *checkerConn) SetReadDeadline(t time.Time) error {
+func (c *ConnChecker) SetReadDeadline(t time.Time) error {
 	return c.conn.SetReadDeadline(t)
 }
 
-func (c *checkerConn) SetWriteDeadline(t time.Time) error {
+func (c *ConnChecker) SetWriteDeadline(t time.Time) error {
 	return c.conn.SetWriteDeadline(t)
 }
 
 /*
 	Creates MITM conn, called deffered alert if something found
 */
-func NewDefferedConnChecker(conn net.Conn, vtscan *Vtscan, onalert func(), onerror func(err error), logAll bool) net.Conn {
+func NewDefferedConnChecker(conn net.Conn, vtscan *Vtscan, onalert func(), onerror func(err error)) net.Conn {
 	var b []byte
 	buf := bytes.NewBuffer(b)
-	return &checkerConn{
+	return &ConnChecker{
 		conn:    conn,
 		buf:     buf,
 		vtscan:  vtscan,
 		onalert: onalert,
 		onerror: onerror,
-		logAll:  logAll,
 	}
 }
