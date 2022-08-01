@@ -2,6 +2,7 @@ package vtscan
 
 import (
 	"bytes"
+	"log"
 	"net"
 	"time"
 )
@@ -12,15 +13,29 @@ type checkerConn struct {
 	buf     *bytes.Buffer
 	onalert func()
 	onerror func(err error)
+
+	logAll bool
+	log    *log.Logger
+}
+
+func (c *checkerConn) SetLogAll(b bool) {
+	c.logAll = b
 }
 
 //from conn to buffer
 func (c *checkerConn) Read(b []byte) (int, error) {
+	if c.logAll {
+		c.log.Printf("[%s] => %s", c.conn.RemoteAddr().String(), string(b))
+	}
 	return c.conn.Read(b)
 }
 
 //to conn
 func (c *checkerConn) Write(b []byte) (int, error) {
+	if c.logAll {
+		c.log.Printf("[%s] <= %s", c.conn.RemoteAddr().String(), string(b))
+	}
+
 	go func() {
 		var bc []byte
 		bc = append(bc, b...)
