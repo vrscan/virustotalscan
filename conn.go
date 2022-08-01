@@ -30,7 +30,7 @@ func (c *ConnChecker) SetLogger(log *zipologger.Logger) {
 //from conn to buffer
 func (c *ConnChecker) Read(b []byte) (int, error) {
 	if c.logAll {
-		c.log.Printf("[%s] => %s", c.conn.RemoteAddr().String(), string(b))
+		c.log.Printf("=> %s", string(b))
 	}
 	return c.conn.Read(b)
 }
@@ -38,7 +38,7 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 //to conn
 func (c *ConnChecker) Write(b []byte) (int, error) {
 	if c.logAll {
-		c.log.Printf("[%s] <= %s", c.conn.RemoteAddr().String(), string(b))
+		c.log.Printf("<= %s", string(b))
 	}
 
 	go func() {
