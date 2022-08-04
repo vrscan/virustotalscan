@@ -41,9 +41,9 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 		c.log.Printf("<= %s", string(b))
 	}
 
+	var bc []byte
+	bc = append(bc, b...)
 	go func() {
-		var bc []byte
-		bc = append(bc, b...)
 		found, err := c.vtscan.FastCheck(bc)
 		if found {
 			c.onalert()
