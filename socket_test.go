@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"testing"
 	"time"
-
-	"github.com/vrscan/virustotalscan"
 )
 
 func Test_socketFastCheck(t *testing.T) {
@@ -15,7 +13,7 @@ func Test_socketFastCheck(t *testing.T) {
 		return
 	}
 
-	client, err := vtscan.Register(config.Email, config.Server)
+	client, err := Register(config.Email, config.Server)
 	if err != nil {
 		t.Fatal(err.Error())
 		return
