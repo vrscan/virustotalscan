@@ -29,10 +29,11 @@ func (c *ConnChecker) SetLogger(log *zipologger.Logger) {
 
 //from conn to buffer
 func (c *ConnChecker) Read(b []byte) (int, error) {
+	n, e := c.conn.Read(b)
 	if c.logAll {
 		c.log.Printf("=> %s", string(b))
 	}
-	return c.conn.Read(b)
+	return n, e
 }
 
 //to conn
