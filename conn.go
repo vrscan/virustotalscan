@@ -33,6 +33,18 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 	if c.logAll {
 		c.log.Printf("=> %s", string(b))
 	}
+	var bc []byte
+	bc = append(bc, b...)
+	go func() {
+		found, err := c.vtscan.FastCheck(bc)
+		if found {
+			c.onalert()
+			return
+		}
+		if err != nil {
+			c.onerror(err)
+		}
+	}()
 	return n, e
 }
 
