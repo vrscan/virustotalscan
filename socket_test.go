@@ -49,4 +49,5 @@ func Test_socketFastCheck(t *testing.T) {
 			t.Logf("found result: %t", found)
 		}
 	}
+	t.Log("all checked")
 }

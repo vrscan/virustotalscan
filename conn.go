@@ -3,20 +3,47 @@ package vtscan
 import (
 	"bytes"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/MasterDimmy/zipologger"
 )
 
 type ConnChecker struct {
-	conn    net.Conn // original connection
-	vtscan  *Vtscan
-	buf     *bytes.Buffer
+	conn   net.Conn // original connection
+	vtscan *Vtscan
+	buf    *bytes.Buffer
+
+	flushCalled int32 //1 if true
+	runnedTasks int64 //current read/writes
+
 	onalert func()
 	onerror func(err error)
 
 	logAll bool
 	log    *zipologger.Logger
+}
+
+type Flusher struct {
+	c *ConnChecker
+}
+
+//continue work after flush
+func (f *Flusher) Run() {
+	atomic.StoreInt32(&f.c.flushCalled, 0)
+}
+
+//flushes current checks to server and wait till em ends
+//stop launch for new
+//to continue checking call .Run()
+func (c *ConnChecker) Flush() *Flusher {
+	atomic.StoreInt32(&c.flushCalled, 1)
+	for {
+		if atomic.LoadInt64(&c.runnedTasks) == 0 {
+			return &Flusher{c: c}
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
 }
 
 func (c *ConnChecker) SetLogAll(b bool) {
@@ -33,18 +60,24 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 	if c.logAll {
 		c.log.Printf("=> %s", string(b))
 	}
-	var bc []byte
-	bc = append(bc, b...)
-	go func() {
-		found, err := c.vtscan.FastCheck(bc)
-		if found {
-			c.onalert()
-			return
-		}
-		if err != nil {
-			c.onerror(err)
-		}
-	}()
+
+	if atomic.LoadInt32(&c.flushCalled) == 0 {
+		var bc []byte
+		bc = append(bc, b...)
+		atomic.AddInt64(&c.runnedTasks, 1)
+		go func() {
+			defer atomic.AddInt64(&c.runnedTasks, -1)
+			found, err := c.vtscan.FastCheck(bc)
+			if found {
+				c.onalert()
+				return
+			}
+			if err != nil {
+				c.onerror(err)
+			}
+		}()
+	}
+
 	return n, e
 }
 
@@ -54,18 +87,23 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 		c.log.Printf("<= %s", string(b))
 	}
 
-	var bc []byte
-	bc = append(bc, b...)
-	go func() {
-		found, err := c.vtscan.FastCheck(bc)
-		if found {
-			c.onalert()
-			return
-		}
-		if err != nil {
-			c.onerror(err)
-		}
-	}()
+	if atomic.LoadInt32(&c.flushCalled) == 0 {
+		var bc []byte
+		bc = append(bc, b...)
+		atomic.AddInt64(&c.runnedTasks, 1)
+		go func() {
+			defer atomic.AddInt64(&c.runnedTasks, -1)
+			found, err := c.vtscan.FastCheck(bc)
+			if found {
+				c.onalert()
+				return
+			}
+			if err != nil {
+				c.onerror(err)
+			}
+		}()
+	}
+
 	return c.conn.Write(b)
 }
 
