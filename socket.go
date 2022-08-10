@@ -61,7 +61,7 @@ func (v *Vtscan) FastCheck(data []byte) (bool, error) {
 		return false, nil
 	}
 
-	if !fastYaraSearch(data) {
+	if fastYaraSearch(data) {
 		return false, nil
 	}
 
