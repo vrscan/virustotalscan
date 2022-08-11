@@ -57,7 +57,7 @@ func (v *Vtscan) startSocketSender() {
 		true if something found with description
 */
 func (v *Vtscan) FastCheck(data []byte) (bool, error) {
-	if len(data) < 40 {
+	if len(data) < 20 {
 		return false, nil
 	}
 
