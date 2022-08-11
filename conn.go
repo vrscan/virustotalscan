@@ -61,9 +61,9 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 		c.log.Printf("=> %s", string(b))
 	}
 
-	if atomic.LoadInt32(&c.flushCalled) == 0 {
+	if atomic.LoadInt32(&c.flushCalled) == 0 && n > 0 {
 		var bc []byte
-		bc = append(bc, b...)
+		bc = append(bc, b[:n]...)
 		atomic.AddInt64(&c.runnedTasks, 1)
 		go func() {
 			defer atomic.AddInt64(&c.runnedTasks, -1)

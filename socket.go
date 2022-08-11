@@ -93,15 +93,15 @@ func (v *Vtscan) FastCheck(data []byte) (bool, error) {
 		return false, nil
 	}
 
-	if fastYaraSearch(data) {
-		return false, nil
-	}
-
 	v.m.Lock()
 	defer v.m.Unlock()
 
 	if v.conn == nil {
 		return false, fmt.Errorf("connection is closed")
+	}
+
+	if fastYaraSearch(data) {
+		return false, nil
 	}
 
 	var dataLen [4]byte
