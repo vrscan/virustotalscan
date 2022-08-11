@@ -69,6 +69,8 @@ func (v *Vtscan) StartSocketSender() {
 					v.setLastError(err)
 					return
 				}
+
+				v.setLastError(nil)
 				return
 			}()
 
