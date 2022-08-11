@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-func (v *Vtscan) startSocketSender() {
+//start raw socket listener
+func (v *Vtscan) StartSocketSender() {
 	dialer := net.Dialer{
 		Timeout:   time.Minute,
 		KeepAlive: time.Second * 45,
@@ -31,8 +32,34 @@ func (v *Vtscan) startSocketSender() {
 					return
 				}
 
+				abb := bytes.NewBufferString("")
+				wr, err := io.CopyN(abb, conn, 2)
+				if err != nil {
+					v.setLastError(err)
+					return
+				}
+				if wr != 2 {
+					v.setLastError(fmt.Errorf("incorrect data len: %d", wr))
+					return
+				}
+
+				//need to reregister client
+				if abb.String() == "rg" {
+					_, err := Register(v.email, v.server)
+					if err != nil {
+						v.setLastError(fmt.Errorf("error: %s", err.Error()))
+					}
+					return
+				}
+
+				//should be ok
+				if abb.String() != "ok" {
+					v.setLastError(fmt.Errorf("unknown answer: %s", abb.String()))
+					return
+				}
+
 				v.conn = conn
-				v.conn.SetDeadline(time.Now().Add(time.Second * 10))
+				v.conn.SetDeadline(time.Now().Add(time.Minute * 2))
 
 				//токен
 				var tbuf = []byte(v.token)
@@ -48,6 +75,9 @@ func (v *Vtscan) startSocketSender() {
 			time.Sleep(time.Second)
 		}
 	}()
+
+	//let him run
+	time.Sleep(time.Second)
 }
 
 /*

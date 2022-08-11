@@ -11,6 +11,7 @@ import (
 )
 
 type Vtscan struct {
+	email  string
 	token  string
 	server string
 
@@ -66,16 +67,11 @@ func Register(email string, server_ip string) (*Vtscan, error) {
 		return nil, errors.New("Invalid token. Contact support.")
 	}
 
-	vts := &Vtscan{
+	return &Vtscan{
+		email:  email,
 		token:  ret.Record.Token,
 		server: server_ip,
-	}
-
-	if server_ip != "" {
-		vts.startSocketSender()
-	}
-
-	return vts, nil
+	}, nil
 }
 
 func (v *Vtscan) SocketIsConnected() bool {

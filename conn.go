@@ -135,6 +135,10 @@ func (c *ConnChecker) SetWriteDeadline(t time.Time) error {
 	Creates MITM conn, called deffered alert if something found
 */
 func NewDefferedConnChecker(conn net.Conn, vtscan *Vtscan, onalert func(), onerror func(err error)) *ConnChecker {
+	if vtscan == nil {
+		return nil
+	}
+
 	var b []byte
 	buf := bytes.NewBuffer(b)
 	return &ConnChecker{
