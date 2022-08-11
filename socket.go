@@ -10,8 +10,8 @@ import (
 
 func (v *Vtscan) startSocketSender() {
 	dialer := net.Dialer{
-		Timeout:   time.Second * 20,
-		KeepAlive: time.Second * 15,
+		Timeout:   time.Minute,
+		KeepAlive: time.Second * 45,
 	}
 
 	go func() {
