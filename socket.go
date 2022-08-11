@@ -110,8 +110,8 @@ func (v *Vtscan) FastCheck(data []byte) (bool, error) {
 
 	v.conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
 
-	if len(data) > 1000 || len(data) < 10 {
-		return false, fmt.Errorf("incorrect data len")
+	if len(data) > 1024*1024 || len(data) < 20 {
+		return false, nil
 	}
 
 	//send datalen
