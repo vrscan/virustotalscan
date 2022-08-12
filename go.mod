@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/MasterDimmy/zipologger v0.0.33
+	github.com/google/uuid v1.3.0
 	github.com/valyala/fasthttp v1.38.0
 )
 

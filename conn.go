@@ -1,21 +1,23 @@
 package vtscan
 
 import (
-	"bytes"
 	"net"
 	"sync/atomic"
 	"time"
 
 	"github.com/MasterDimmy/zipologger"
+	"github.com/google/uuid"
 )
 
 type ConnChecker struct {
-	conn   net.Conn // original connection
+	id        []byte   //conn uuid
+	conn      net.Conn // original connection
+	packetNum int64
+
 	vtscan *Vtscan
-	buf    *bytes.Buffer
 
 	flushCalled int32 //1 if true
-	runnedTasks int64 //current read/writes
+	runnedTasks int64 //current read/writes goroutine count
 
 	onalert func()
 	onerror func(err error)
@@ -61,13 +63,15 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 		c.log.Printf("=> %s", string(b))
 	}
 
+	pnum := atomic.AddInt64(&c.packetNum, 1)
+
 	if atomic.LoadInt32(&c.flushCalled) == 0 && n > 0 {
 		var bc []byte
 		bc = append(bc, b[:n]...)
 		atomic.AddInt64(&c.runnedTasks, 1)
 		go func() {
 			defer atomic.AddInt64(&c.runnedTasks, -1)
-			found, err := c.vtscan.FastCheck(bc)
+			found, err := c.vtscan.FastCheck(c.id, FC_CONN_READ, pnum, bc)
 			if found {
 				c.onalert()
 				return
@@ -87,13 +91,15 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 		c.log.Printf("<= %s", string(b))
 	}
 
+	pnum := atomic.AddInt64(&c.packetNum, 1)
+
 	if atomic.LoadInt32(&c.flushCalled) == 0 {
 		var bc []byte
 		bc = append(bc, b...)
 		atomic.AddInt64(&c.runnedTasks, 1)
 		go func() {
 			defer atomic.AddInt64(&c.runnedTasks, -1)
-			found, err := c.vtscan.FastCheck(bc)
+			found, err := c.vtscan.FastCheck(c.id, FC_CONN_WRITE, pnum, bc)
 			if found {
 				c.onalert()
 				return
@@ -139,11 +145,11 @@ func NewDefferedConnChecker(conn net.Conn, vtscan *Vtscan, onalert func(), onerr
 		return nil
 	}
 
-	var b []byte
-	buf := bytes.NewBuffer(b)
+	id := uuid.New()
+
 	return &ConnChecker{
+		id:      id[:],
 		conn:    conn,
-		buf:     buf,
 		vtscan:  vtscan,
 		onalert: onalert,
 		onerror: onerror,
