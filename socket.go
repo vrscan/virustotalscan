@@ -91,8 +91,8 @@ type fcConnDir byte
 
 //direction of data moving
 const (
-	FC_CONN_READ  = fcConnDir(1)
-	FC_CONN_WRITE = fcConnDir(2)
+	FC_CONN_READ  = fcConnDir(1) // server <= client
+	FC_CONN_WRITE = fcConnDir(2) // server => client
 )
 
 /*
