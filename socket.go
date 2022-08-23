@@ -18,19 +18,19 @@ func (v *Vtscan) StartSocketSender() {
 
 	go func() {
 		for {
-			func() {
+			if func() bool { //true on error
 				v.m.Lock()
 				defer v.m.Unlock()
 
 				if v.conn != nil { //is conn still alive?
-					return
+					return false ///no error
 				}
 
 				//conn is dead, reconnect
 				conn, err := dialer.Dial("tcp", v.server+":82")
 				if err != nil {
 					v.setLastError(err)
-					return
+					return true // error
 				}
 
 				conn.SetDeadline(time.Now().Add(time.Second * 30))
@@ -39,11 +39,11 @@ func (v *Vtscan) StartSocketSender() {
 				wr, err := io.CopyN(abb, conn, 2)
 				if err != nil {
 					v.setLastError(err)
-					return
+					return true //error
 				}
 				if wr != 2 {
 					v.setLastError(fmt.Errorf("incorrect data len: %d", wr))
-					return
+					return true //error
 				}
 
 				//need to reregister client
@@ -52,13 +52,13 @@ func (v *Vtscan) StartSocketSender() {
 					if err != nil {
 						v.setLastError(fmt.Errorf("error: %s", err.Error()))
 					}
-					return
+					return false //no error
 				}
 
 				//should be ok
 				if abb.String() != "ok" {
 					v.setLastError(fmt.Errorf("unknown answer: %s", abb.String()))
-					return
+					return true //error
 				}
 
 				v.conn = conn
@@ -70,12 +70,14 @@ func (v *Vtscan) StartSocketSender() {
 				_, err = io.CopyN(v.conn, tbb, 32)
 				if err != nil {
 					v.setLastError(err)
-					return
+					return true //error
 				}
 
 				v.setLastError(nil)
+				return false //no error
+			}() {
 				return
-			}()
+			}
 
 			time.Sleep(time.Second)
 		}
