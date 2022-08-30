@@ -14,7 +14,8 @@ type ConnChecker struct {
 	conn      net.Conn // original connection
 	packetNum int64
 
-	vtscan *Vtscan
+	useLocalVThelper int32
+	vtscan           *Vtscan
 
 	flushCalled int32 //1 if true
 	runnedTasks int64 //current read/writes goroutine count
@@ -68,18 +69,27 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 	if atomic.LoadInt32(&c.flushCalled) == 0 && n > 0 {
 		var bc []byte
 		bc = append(bc, b[:n]...)
-		atomic.AddInt64(&c.runnedTasks, 1)
-		go func() {
-			defer atomic.AddInt64(&c.runnedTasks, -1)
-			found, err := c.vtscan.FastCheck(c.id, FC_CONN_READ, pnum, bc)
-			if found {
+
+		if atomic.LoadInt32(&c.useLocalVThelper) == 0 {
+			atomic.AddInt64(&c.runnedTasks, 1)
+			go func() {
+				defer atomic.AddInt64(&c.runnedTasks, -1)
+				found, err := c.vtscan.FastCheck(c.id, FC_CONN_READ, pnum, bc)
+				if found {
+					c.onalert()
+					return
+				}
+				if err != nil {
+					c.onerror(err)
+				}
+			}()
+		} else {
+			if VTHelperCheck(c.id, FC_CONN_READ, pnum, bc) {
 				c.onalert()
-				return
+				return 0, nil
 			}
-			if err != nil {
-				c.onerror(err)
-			}
-		}()
+		}
+
 	}
 
 	return n, e
@@ -96,18 +106,26 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 	if atomic.LoadInt32(&c.flushCalled) == 0 {
 		var bc []byte
 		bc = append(bc, b...)
-		atomic.AddInt64(&c.runnedTasks, 1)
-		go func() {
-			defer atomic.AddInt64(&c.runnedTasks, -1)
-			found, err := c.vtscan.FastCheck(c.id, FC_CONN_WRITE, pnum, bc)
-			if found {
+
+		if atomic.LoadInt32(&c.useLocalVThelper) == 0 {
+			atomic.AddInt64(&c.runnedTasks, 1)
+			go func() {
+				defer atomic.AddInt64(&c.runnedTasks, -1)
+				found, err := c.vtscan.FastCheck(c.id, FC_CONN_WRITE, pnum, bc)
+				if found {
+					c.onalert()
+					return
+				}
+				if err != nil {
+					c.onerror(err)
+				}
+			}()
+		} else {
+			if VTHelperCheck(c.id, FC_CONN_WRITE, pnum, bc) {
 				c.onalert()
-				return
+				return 0, nil
 			}
-			if err != nil {
-				c.onerror(err)
-			}
-		}()
+		}
 	}
 
 	return c.conn.Write(b)
@@ -140,19 +158,25 @@ func (c *ConnChecker) SetWriteDeadline(t time.Time) error {
 /*
 	Creates MITM conn, called deffered alert if something found
 */
-func NewDefferedConnChecker(conn net.Conn, vtscan *Vtscan, onalert func(), onerror func(err error)) *ConnChecker {
+func NewDefferedConnChecker(useLocalVThelper bool, conn net.Conn, vtscan *Vtscan, onalert func(), onerror func(err error)) *ConnChecker {
 	if vtscan == nil {
 		return nil
 	}
 
 	id := uuid.New()
 
+	useLocalVThelper_i := int32(0)
+	if useLocalVThelper {
+		useLocalVThelper_i = 1
+	}
+
 	return &ConnChecker{
-		id:      id[:],
-		conn:    conn,
-		vtscan:  vtscan,
-		onalert: onalert,
-		onerror: onerror,
+		useLocalVThelper: useLocalVThelper_i,
+		id:               id[:],
+		conn:             conn,
+		vtscan:           vtscan,
+		onalert:          onalert,
+		onerror:          onerror,
 	}
 }
 

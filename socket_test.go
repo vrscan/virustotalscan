@@ -1,6 +1,7 @@
 package vtscan
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -40,7 +41,7 @@ func Test_socketFastCheck(t *testing.T) {
 				return
 			}
 
-			found, err := client.FastCheck(filebuf)
+			found, err := client.FastCheck([]byte(fmt.Sprintf("%16d", i)), 1, 1, filebuf)
 			if err != nil {
 				t.Fatal(err.Error())
 				return
