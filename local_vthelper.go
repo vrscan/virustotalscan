@@ -65,7 +65,7 @@ var GetServerConn = func() func(connId string) *serverConn {
 		if !existed && sconn_ != nil {
 			//no pauses, establish new connection for future use
 			go func() {
-				connLog.Printf("%s | start work -------------", connId)
+				connLog.Printf("%x | start work -------------", connId)
 				//check connection to server for connId client outside conn
 				for {
 					//are we need this connection?
@@ -75,15 +75,15 @@ var GetServerConn = func() func(connId string) *serverConn {
 					}
 					sconn := sconn_.(*serverConn)
 
-					connLog.Printf("%s | dial to %s", connId, port)
+					connLog.Printf("%x | dial to %s", connId, port)
 					conn, err := dialer.Dial("tcp", port)
 					if err != nil {
-						connLog.Printf("%s | error: %s", connId, err.Error())
+						connLog.Printf("%x | error: %s", connId, err.Error())
 						time.Sleep(2 * time.Second) //retry to connect every 2 sec
 						continue
 					}
 
-					connLog.Printf("%s | connection success", connId)
+					connLog.Printf("%x | connection success", connId)
 
 					sconn.setConn(conn)
 
@@ -92,14 +92,14 @@ var GetServerConn = func() func(connId string) *serverConn {
 						//are we need this connection?
 						_, ok := conns.Peek(connId)
 						if !ok {
-							connLog.Printf("%s | no more need. close.", connId)
+							connLog.Printf("%x | no more need. close.", connId)
 							conn.Close()
 							return
 						}
 
 						if !sconn.pingpong() {
 							sconn.Fail()
-							connLog.Printf("%s | ping pong failed. reconnect.", connId)
+							connLog.Printf("%x | ping pong failed. reconnect.", connId)
 							break
 						}
 
