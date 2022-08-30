@@ -17,7 +17,7 @@ type ConnChecker struct {
 	useLocalVThelper int32
 	vtscan           *Vtscan
 
-	flushCalled int32 //1 if true
+	flushCalled int32 //set 1 if true
 	runnedTasks int64 //current read/writes goroutine count
 
 	onalert func()
