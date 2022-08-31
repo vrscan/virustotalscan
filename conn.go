@@ -85,7 +85,6 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 			}()
 		} else {
 			if VTHelperCheck(c.id, FC_CONN_READ, pnum, bc) {
-				c.onalert()
 				return 0, nil
 			}
 		}
@@ -122,7 +121,6 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 			}()
 		} else {
 			if VTHelperCheck(c.id, FC_CONN_WRITE, pnum, bc) {
-				c.onalert()
 				return 0, nil
 			}
 		}
