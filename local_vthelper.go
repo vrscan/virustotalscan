@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MasterDimmy/golang-lruexpire"
 	"github.com/MasterDimmy/zipologger"
 )
 
@@ -32,7 +31,7 @@ func VTHelperCheck(connId []byte, dir fcConnDir, packetNum int64, data []byte) b
 		return false
 	}
 
-	conn := GetServerConn(string(connId))
+	conn := GetServerConn()
 
 	if conn == nil {
 		return false
@@ -47,7 +46,7 @@ type serverConn struct {
 }
 
 // nil if no good connection
-var GetServerConn = func() func(connId string) *serverConn {
+var GetServerConn = func() func() *serverConn {
 	connLog := zipologger.GetLoggerBySuffix("vtlconn.log", "./logs/", 2, 2, 2, false)
 
 	dialer := net.Dialer{
@@ -56,57 +55,36 @@ var GetServerConn = func() func(connId string) *serverConn {
 	}
 
 	port := ":89"
-	var conns, _ = lru.NewWithExpire(1000000, time.Minute*20)
 
-	return func(connId string) *serverConn {
-		existed, _ := conns.ContainsOrAdd(connId, &serverConn{})
-		sconn_, _ := conns.Get(connId)
+	var sconn = &serverConn{}
 
-		if !existed && sconn_ != nil {
-			//no pauses, establish new connection for future use
-			go func() {
-				//check connection to server for connId client outside conn
-				for {
-					//are we need this connection?
-					sconn_, ok := conns.Peek(connId)
-					if !ok {
-						return
-					}
-					sconn := sconn_.(*serverConn)
+	go func() {
+		for {
+			//just need 1 connection to be opened
+			conn, err := dialer.Dial("tcp", port)
+			if err != nil {
+				connLog.Printf("error: %s", err.Error())
+				time.Sleep(2 * time.Second) //retry to connect every 2 sec
+				continue
+			}
 
-					conn, err := dialer.Dial("tcp", port)
-					if err != nil {
-						connLog.Printf("%x | error: %s", connId, err.Error())
-						time.Sleep(2 * time.Second) //retry to connect every 2 sec
-						continue
-					}
+			sconn.setConn(conn)
 
-					sconn.setConn(conn)
-
-					//conn ok, test conn every 5 sec
-					for {
-						//are we need this connection?
-						_, ok := conns.Peek(connId)
-						if !ok {
-							conn.Close()
-							return
-						}
-
-						if !sconn.pingpong() {
-							sconn.Fail()
-							connLog.Printf("%x | ping pong failed. reconnect.", connId)
-							break
-						}
-
-						time.Sleep(5 * time.Second)
-					}
-
+			//conn ok, test conn every 5 sec
+			for {
+				if !sconn.pingpong() {
+					sconn.Fail()
+					connLog.Print("ping pong failed. reconnect.")
+					break
 				}
-			}()
 
-			return nil //no connection for now
+				time.Sleep(2 * time.Second)
+			}
 		}
-		return sconn_.(*serverConn)
+	}()
+
+	return func() *serverConn {
+		return sconn
 	}
 }()
 
