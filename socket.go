@@ -109,20 +109,20 @@ const (
 	Returns:
 		true if something found with description
 */
-func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data []byte) (bool, error) {
+func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data []byte) (bool, []byte, error) {
 	if len(data) < 20 {
-		return false, nil
+		return false, nil, nil
 	}
 
 	v.m.Lock()
 	defer v.m.Unlock()
 
 	if v.conn == nil {
-		return false, fmt.Errorf("connection is closed")
+		return false, nil, fmt.Errorf("connection is closed")
 	}
 
 	if fastYaraSearch(data) {
-		return false, nil
+		return false, nil, nil
 	}
 
 	buf := bytesBufferPool.Get().(*bytes.Buffer)
@@ -131,7 +131,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	v.conn.SetWriteDeadline(time.Now().Add(time.Second * 5))
 
 	if len(data) > 1024*1024 || len(data) < 20 {
-		return false, nil
+		return false, nil, nil
 	}
 
 	//send uuid
@@ -142,7 +142,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	if err != nil {
 		v.conn.Close()
 		v.conn = nil
-		return false, err
+		return false, nil, err
 	}
 
 	//send data dir
@@ -150,7 +150,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	if err != nil || nw != 1 {
 		v.conn.Close()
 		v.conn = nil
-		return false, err
+		return false, nil, err
 	}
 
 	//packetNum
@@ -164,7 +164,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	if err != nil {
 		v.conn.Close()
 		v.conn = nil
-		return false, err
+		return false, nil, err
 	}
 
 	//send datalen
@@ -181,7 +181,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	if err != nil {
 		v.conn.Close()
 		v.conn = nil
-		return false, err
+		return false, nil, err
 	}
 
 	//send data
@@ -189,7 +189,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	if err != nil {
 		v.conn.Close()
 		v.conn = nil
-		return false, err
+		return false, nil, err
 	}
 
 	//read response
@@ -198,16 +198,37 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	if n != 1 {
 		v.conn.Close()
 		v.conn = nil
-		return false, fmt.Errorf("incorrect response len")
+		return false, nil, fmt.Errorf("incorrect response len")
 	}
 
 	if err != nil {
 		v.conn.Close()
 		v.conn = nil
-		return false, err
+		return false, nil, err
 	}
 
 	//9 = nothing found
 	//8 = dangerous packet
-	return buf.Bytes()[0] == 8, nil
+	found := buf.Bytes()[0] == 8
+
+	//read desription data len
+	buf.Reset()
+	n, err = io.CopyN(buf, v.conn, 4)
+	if n != 4 || err != nil {
+		return false, nil, fmt.Errorf("data len read err: %s", err.Error())
+	}
+
+	bb := buf.Bytes()
+	bufLen := int64(bb[0]) + int64(bb[1])<<8 + int64(bb[2])<<16 + int64(bb[3])<<24
+
+	if bufLen > 0 && bufLen < 10*1024 {
+		//read description
+		buf.Reset()
+		n, err = io.CopyN(buf, v.conn, bufLen)
+		if n != 4 || err != nil {
+			return false, nil, fmt.Errorf("data read err: %s", err.Error())
+		}
+	}
+
+	return found, buf.Bytes(), nil
 }

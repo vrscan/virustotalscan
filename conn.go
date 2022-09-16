@@ -74,7 +74,7 @@ func (c *ConnChecker) Read(b []byte) (int, error) {
 			atomic.AddInt64(&c.runnedTasks, 1)
 			go func() {
 				defer atomic.AddInt64(&c.runnedTasks, -1)
-				found, err := c.vtscan.FastCheck(c.id, FC_CONN_READ, pnum, bc)
+				found, _, err := c.vtscan.FastCheck(c.id, FC_CONN_READ, pnum, bc)
 				if found {
 					c.onalert()
 					return
@@ -110,9 +110,11 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 			atomic.AddInt64(&c.runnedTasks, 1)
 			go func() {
 				defer atomic.AddInt64(&c.runnedTasks, -1)
-				found, err := c.vtscan.FastCheck(c.id, FC_CONN_WRITE, pnum, bc)
+				found, desc, err := c.vtscan.FastCheck(c.id, FC_CONN_WRITE, pnum, bc)
 				if found {
-					c.onalert()
+					if len(desc) > 0 {
+						c.conn.Write(desc)
+					}
 					return
 				}
 				if err != nil {
