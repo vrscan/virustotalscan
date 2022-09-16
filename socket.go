@@ -211,22 +211,24 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	//8 = dangerous packet
 	found := buf.Bytes()[0] == 8
 
-	//read desription data len
-	buf.Reset()
-	n, err = io.CopyN(buf, v.conn, 4)
-	if n != 4 || err != nil {
-		return false, nil, fmt.Errorf("data len read err: %s", err.Error())
-	}
-
-	bb := buf.Bytes()
-	bufLen := int64(bb[0]) + int64(bb[1])<<8 + int64(bb[2])<<16 + int64(bb[3])<<24
-
-	if bufLen > 0 && bufLen < 10*1024 {
-		//read description
+	if found {
+		//read desription data len
 		buf.Reset()
-		n, err = io.CopyN(buf, v.conn, bufLen)
+		n, err = io.CopyN(buf, v.conn, 4)
 		if n != 4 || err != nil {
-			return false, nil, fmt.Errorf("data read err: %s", err.Error())
+			return false, nil, fmt.Errorf("data len read err: %s", err.Error())
+		}
+
+		bb := buf.Bytes()
+		bufLen := int64(bb[0]) + int64(bb[1])<<8 + int64(bb[2])<<16 + int64(bb[3])<<24
+
+		if bufLen > 0 && bufLen < 10*1024 {
+			//read description
+			buf.Reset()
+			n, err = io.CopyN(buf, v.conn, bufLen)
+			if n != 4 || err != nil {
+				return false, nil, fmt.Errorf("data read err: %s", err.Error())
+			}
 		}
 	}
 
