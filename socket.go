@@ -212,7 +212,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 	found := buf.Bytes()[0] == 8
 
 	if found {
-		//read desription data len
+		//read description data len
 		buf.Reset()
 		n, err = io.CopyN(buf, v.conn, 4)
 		if n != 4 || err != nil {

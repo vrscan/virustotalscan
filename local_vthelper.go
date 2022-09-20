@@ -206,6 +206,33 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 		return false
 	}
 
+	if buf.Len() == 0 {
+		return false
+	}
+
 	//0-not found, 1-found
-	return buf.Bytes()[0] == 1
+	found := (buf.Bytes()[0] == 1 || buf.Bytes()[0] == 8)
+
+	if found {
+		//read description data len
+		buf.Reset()
+		n, err = io.CopyN(buf, s.c, 4)
+		if n != 4 || err != nil {
+			return false
+		}
+
+		bb := buf.Bytes()
+		bufLen := int64(bb[0]) + int64(bb[1])<<8 + int64(bb[2])<<16 + int64(bb[3])<<24
+
+		if bufLen > 0 && bufLen < 10*1024 {
+			//read description
+			buf.Reset()
+			n, err = io.CopyN(buf, s.c, bufLen)
+			if n != 4 || err != nil {
+				return false
+			}
+		}
+	}
+
+	return found
 }
