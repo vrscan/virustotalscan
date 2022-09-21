@@ -130,7 +130,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 		return false, nil
 	}
 
-	s.c.SetWriteDeadline(time.Now().Add(time.Second))
+	s.c.SetWriteDeadline(time.Now().Add(time.Second * 2))
 
 	if len(connId) != 16 {
 		panic("connId not 16 bytes len!")
@@ -196,7 +196,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	}
 
 	//read response
-	s.c.SetReadDeadline(time.Now().Add(time.Second))
+	s.c.SetReadDeadline(time.Now().Add(time.Second * 2))
 	n, err = io.CopyN(buf, s.c, 1)
 	if n != 1 {
 		s.c.Close()
