@@ -25,16 +25,17 @@ import (
 
 	Returns:
 		true if something found
+		decription
 */
-func VTHelperCheck(connId []byte, dir fcConnDir, packetNum int64, data []byte) bool {
+func helperCheck(connId []byte, dir fcConnDir, packetNum int64, data []byte) (bool, []byte) {
 	if len(data) < 10 || len(data) > 10240 {
-		return false
+		return false, nil
 	}
 
 	conn := GetServerConn()
 
 	if conn == nil {
-		return false
+		return false, nil
 	}
 
 	return conn.send(connId, dir, packetNum, data)
@@ -112,10 +113,13 @@ var ping = []byte("ping")
 
 // true on success
 func (s *serverConn) pingpong() bool {
-	return s.send(zeroConn, 1, 1, ping)
+	a, _ := s.send(zeroConn, 1, 1, ping)
+	return a
 }
 
-func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []byte) bool {
+//result
+//description
+func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []byte) (bool, []byte) {
 	buf := bytesBufferPool.Get().(*bytes.Buffer)
 	defer bytesBufferPool.Put(buf)
 
@@ -123,14 +127,14 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	defer s.m.Unlock()
 
 	if s.c == nil {
-		return false
+		return false, nil
 	}
 
 	s.c.SetWriteDeadline(time.Now().Add(time.Second))
 
 	if len(connId) != 16 {
 		panic("connId not 16 bytes len!")
-		return false //never here, but...
+		return false, nil //never here, but...
 	}
 
 	//send conn uid
@@ -141,7 +145,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	if err != nil {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	//send data dir
@@ -149,7 +153,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	if err != nil || nw != 1 {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	//packetNum
@@ -163,7 +167,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	if err != nil {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	//send data len
@@ -180,7 +184,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	if err != nil {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	//send data
@@ -188,7 +192,7 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	if err != nil {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	//read response
@@ -197,17 +201,17 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 	if n != 1 {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	if err != nil {
 		s.c.Close()
 		s.c = nil
-		return false
+		return false, nil
 	}
 
 	if buf.Len() == 0 {
-		return false
+		return false, nil
 	}
 
 	//0-not found, 1-found
@@ -218,7 +222,8 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 		buf.Reset()
 		n, err = io.CopyN(buf, s.c, 4)
 		if n != 4 || err != nil {
-			return false
+			s.c = nil
+			return false, nil
 		}
 
 		bb := buf.Bytes()
@@ -229,10 +234,13 @@ func (s *serverConn) send(connId []byte, dir fcConnDir, packetNum int64, data []
 			buf.Reset()
 			n, err = io.CopyN(buf, s.c, bufLen)
 			if n != 4 || err != nil {
-				return false
+				s.c = nil
+				return false, nil
 			}
 		}
+
+		return found, buf.Bytes()
 	}
 
-	return found
+	return found, nil
 }
