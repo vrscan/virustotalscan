@@ -75,7 +75,7 @@ var GetServerConn = func() func() *serverConn {
 			for {
 				if !sconn.pingpong() {
 					sconn.Fail()
-					connLog.Print("ping pong failed. reconnect.")
+					//connLog.Print("ping pong failed. reconnect.")
 					break
 				}
 
