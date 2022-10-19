@@ -207,6 +207,7 @@ func (v *Vtscan) FastCheck(connId []byte, dir fcConnDir, packetNum int64, data [
 		return false, nil, err
 	}
 
+	//3 = ping
 	//9 = nothing found
 	//8 = dangerous packet
 	found := buf.Bytes()[0] == 8

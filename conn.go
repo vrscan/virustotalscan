@@ -112,7 +112,7 @@ func (c *ConnChecker) Write(b []byte) (int, error) {
 				defer atomic.AddInt64(&c.runnedTasks, -1)
 				found, desc, err := c.vtscan.FastCheck(c.id, FC_CONN_WRITE, pnum, bc)
 				if found {
-					if len(desc) > 0 {
+					if len(desc) > 1 {
 						c.conn.Write(desc)
 					}
 					return
