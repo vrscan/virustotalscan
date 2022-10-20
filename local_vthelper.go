@@ -73,13 +73,12 @@ var GetServerConn = func() func() *serverConn {
 
 			//conn ok, test conn every 5 sec
 			for {
+				time.Sleep(2 * time.Second)
 				if !sconn.pingpong() {
 					sconn.Fail()
 					//connLog.Print("ping pong failed. reconnect.")
 					break
 				}
-
-				time.Sleep(2 * time.Second)
 			}
 		}
 	}()
