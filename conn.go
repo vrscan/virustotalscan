@@ -60,8 +60,8 @@ func (c *ConnChecker) SetLogger(log *zipologger.Logger) {
 // from conn to buffer
 func (c *ConnChecker) Read(b []byte) (int, error) {
 	n, e := c.conn.Read(b)
-	if c.logAll {
-		c.log.Printf("=> %s", string(b))
+	if c.logAll && n>0{
+		c.log.Printf("=> %s", string(b[:n]))
 	}
 
 	pnum := atomic.AddInt64(&c.packetNum, 1)
